@@ -1,0 +1,23 @@
+# log files
+*.log
+*.jou
+*.str
+
+# build directories
+build*
+
+# temp files
+.Xil
+.run
+.ipcache
+
+# python cache
+__pycache__
+
+# vscode config
+.vscode
+
+# xvlog-xelab-xsim generated files
+xelab.pb
+xsim.dir
+xvlog.pb
