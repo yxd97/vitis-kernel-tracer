@@ -5,4 +5,4 @@ Mac users please see [Microsoft - Access your Remote Desktop resources: Get star
 You will need to log in with the same credentials as ssh.
 
 Use the following command to load the tools on the research server:
-``` mmodule load xilinx-2022.1 ```
+``` module load xilinx-2022.1 ```
