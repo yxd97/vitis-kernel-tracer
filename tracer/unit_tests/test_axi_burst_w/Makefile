@@ -11,7 +11,8 @@ TOP_MODULE := testbench
 
 VC_FLAGS := -sv
 
-USE_WAVE_CONFIG := -view work.$(TOP_MODULE).wcfg
+# update and uncomment the following line to run simulation with wave configuration
+# USE_WAVE_CONFIG := -view <your wave config>.wcfg
 
 .PHONY: sim guisim clean cleanall
 
