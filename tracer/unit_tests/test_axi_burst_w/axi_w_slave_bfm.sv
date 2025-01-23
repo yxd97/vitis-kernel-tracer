@@ -75,15 +75,6 @@ assign rresp = 'dx;
 assign rlast = 0;
 assign rvalid = 0;
 
-// initialize write channels
-initial begin
-    awready = 0;
-    wready = 0;
-    bvalid = 0;
-    bid = 'dx;
-    bresp = 'dx;
-end
-
 // combinational memory model
 logic [DataWidth-1:0] memory [0:NumMemoryWords-1];
 

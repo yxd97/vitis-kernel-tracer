@@ -21,3 +21,7 @@ __pycache__
 xelab.pb
 xsim.dir
 xvlog.pb
+
+# waveforms
+*.wdb
+*.wcfg

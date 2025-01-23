@@ -90,7 +90,7 @@ logic bready;
 logic bvalid;
 
 AXIWriteOnlySlaveBFM #(
-    .AdddressWdith(AXIAddrWdith),
+    .AddressWidth(AXIAddrWdith),
     .DataWidth(AXIDataWidth),
     .IDWidth(AXIIDWidth),
     .MaxBurstLen(AXIMaxBurstLen),
@@ -127,8 +127,8 @@ logic [DataBufferAddrWidth-1:0] dut_data_len;
 logic [AXIAddrWdith-1:0] dut_dst_ptr;
 AXIBurstWriteEngine #(
     .BufferDataWidth(DataBufferDataWidth),
-    .BufferAddrWdith(DataBufferAddrWidth),
-    .AXIAddrWdith(AXIAddrWdith),
+    .BufferAddrWidth(DataBufferAddrWidth),
+    .AXIAddrWidth(AXIAddrWdith),
     .AXIDataWidth(AXIDataWidth),
     .AXIMaxBurstLen(AXIMaxBurstLen)
 ) dut (
@@ -197,7 +197,7 @@ function void disable_bfm_w_stall ();
     w_random_stall = 0;
 endfunction
 
-function dvoid isable_bfm_b_stall ();
+function void disable_bfm_b_stall ();
     assert(reset)
     else $fatal("disable_bfm_b_stall() must be called when reset is asserted");
     b_random_stall = 0;
@@ -245,7 +245,7 @@ task automatic test_single_write (
     logic [AXIAddrWdith-1:0] dst_addr
 );
     $display("======= Test Single Write =======");
-    $display("Moving %d words from src_addr: %h to dst_addr: %h", 1, src_addr, dst_addr);
+    $display("Moving %0d words from src_addr: 0x%h to dst_addr: 0x%h", 1, src_addr, dst_addr);
 
     // initialization of test case
     reset = 1;
@@ -273,11 +273,13 @@ task automatic test_single_write (
     // check results
     assert(peek_axi_memory(dst_addr) == src_buffer[src_addr])
     else begin
-        $display(
-            "Result mismatch! Expected: %h, Got: %h",
+        $fatal(
+            "Result mismatch! Expected: 0x%h, Got: 0x%h",
             src_buffer[src_addr], peek_axi_memory(dst_addr)
         );
     end
+
+    $display("======= Test Single Write: PASSED");
 endtask
 
 //==============================================================================
@@ -290,6 +292,9 @@ initial begin
     reset = 0;
 
     test_single_write(0, 0);
+
+    $display("All tests passed!");
+    $finish;
 end
 
 endmodule
