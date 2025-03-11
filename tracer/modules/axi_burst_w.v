@@ -135,7 +135,7 @@ end
 // axi aw channel signal registers
 reg [AXIAddrWidth-1:0] awaddr_reg;
 reg [AXIIDWdith-1:0] awid_reg; // always 0
-reg [7:0] awlen_reg; // 1-based
+reg [7:0] awlen_reg; 
 wire init_awaddr_reg;
 wire incr_awaddr_reg;
 wire update_awlen_reg;
@@ -163,15 +163,15 @@ end
 
 // states
 localparam
-    IDLE   = 3'd0,
-    PREP   = 3'd1, // calculate number of batches and last batch size
-    PRE_AW = 3'd2, // calculate awaddr and awlen
-    AW     = 3'd3, // issue write transaction
-    W1     = 3'd4, // load the first data from buffer
-    W2     = 3'd4, // write pipeline fully loaded
-    W3     = 3'd4, // waiting for AXI write to complete
-    B      = 3'd5, // wait for response
-    DONE   = 3'd6; // done
+    IDLE   = 4'd0,
+    PREP   = 4'd1, // calculate number of batches and last batch size
+    PRE_AW = 4'd2, // calculate awaddr and awlen
+    AW     = 4'd3, // issue write transaction
+    W1     = 4'd4, // load the first data from buffer
+    W2     = 4'd5, // write pipeline fully loaded
+    W3     = 4'd6, // waiting for AXI write to complete
+    B      = 4'd7, // wait for response
+    DONE   = 4'd8; // done
 
 // Note: RAM-AXI write pipeline
 /*
@@ -209,7 +209,7 @@ localparam
  incr_burst_counter: wready & wvalid
 */
 
-reg [2:0] state, next_state;
+reg [3:0] state, next_state;
 
 always @(posedge clk) begin
     if (reset) state <= IDLE;
@@ -230,7 +230,7 @@ always @(*) begin
         W1:
             next_state = wready ? W2 : W3;
         W2:
-            next_state = wready ? W2 : W3;
+            next_state = (wready == 0) || (burst_counter == awlen_reg) ? W3 : W2;
         W3:
             next_state = wready ?
                             (burst_counter == awlen_reg) ?
@@ -243,7 +243,7 @@ always @(*) begin
                          : B;
         DONE:
             next_state = done_ready ? IDLE : DONE;
-        default:
+        default: 
             next_state = IDLE;
     endcase
 end
@@ -256,7 +256,7 @@ assign calc_num_batches = (state == PREP);
 assign clear_batch_counter = (state == PREP);
 assign clear_burst_counter = (state == AW);
 assign incr_batch_counter = (state == B & bvalid & bready);
-assign incr_burst_counter = wvalid & wready;
+assign incr_burst_counter = wvalid & wready & (burst_counter < awlen_reg);
 assign init_awaddr_reg = (state == PRE_AW);
 assign incr_awaddr_reg = (state == AW & awvalid & awready);
 assign update_awlen_reg = (state == PRE_AW);
@@ -282,7 +282,7 @@ assign awvalid = (state == AW);
 assign wdata = buffer_data;
 assign wstrb = {AXIDataWidth/8{1'b1}};
 assign wid = 'd0;
-assign wvalid = (state == W2 || state == W3);
+assign wvalid = (state == W2);
 assign wlast = (burst_counter == awlen_reg);
 
 assign bready = (state == B);

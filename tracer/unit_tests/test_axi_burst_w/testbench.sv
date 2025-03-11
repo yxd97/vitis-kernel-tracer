@@ -154,7 +154,8 @@ AXIBurstWriteEngine #(
 
 function logic[AXIDataWidth-1:0] peek_axi_memory (logic[AXIAddrWdith-1:0] addr);
     mem_peek_addr = addr >> $clog2(AXIDataWidth/8);
-    return mem_peek_data;
+    return bfm.memory[mem_peek_addr];
+    //return mem_peek_data;
 endfunction
 
 // functions to update the bfm/dut configurations. They MUST only be called when reset is asserted.
@@ -247,6 +248,8 @@ task automatic test_single_write (
     $display("======= Test Single Write =======");
     $display("Moving %0d words from src_addr: 0x%h to dst_addr: 0x%h", 1, src_addr, dst_addr);
 
+    // print initial src_buffer value
+    //$display("SRC Buffer: Addr 0x%h -> Data 0x%h", src_addr, src_buffer[src_addr]);
     // initialization of test case
     reset = 1;
     dut_start_valid = 0;
@@ -264,7 +267,8 @@ task automatic test_single_write (
     set_dut_args(src_addr, dst_addr, 1);
     // signal start and wait for ready
     dut_start_valid = 1;
-    wait_for(dut_start_ready, 1000, "Timeout waiting for dut_start_ready");
+    if(!dut_start_ready)
+        wait_for(dut_start_ready, 1000, "Timeout waiting for dut_start_ready");
 
     // wait for done
     dut_done_ready = 1;
@@ -288,7 +292,11 @@ endtask
 
 initial begin
     reset = 1;
+    
+    init_src_buffer();
+
     tick(1);
+    
     reset = 0;
 
     test_single_write(0, 0);
