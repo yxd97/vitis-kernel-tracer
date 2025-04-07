@@ -286,20 +286,69 @@ task automatic test_single_write (
     $display("======= Test Single Write: PASSED");
 endtask
 
+task automatic test_burst_write (
+    logic [DataBufferAddrWidth-1:0] src_addr,
+    logic [AXIAddrWdith-1:0] dst_addr,
+    int size
+);
+    $display("======= Test Burst Write =======");
+    $display("Moving %0d words from src_addr: 0x%h to dst_addr: 0x%h", size, src_addr, dst_addr);
+
+    // print initial src_buffer value
+    //$display("SRC Buffer: Addr 0x%h -> Data 0x%h", src_addr, src_buffer[src_addr]);
+    // initialization of test case
+    reset = 1;
+    dut_start_valid = 0;
+    dut_done_ready = 0;
+    // disable BFM stalls
+    disable_bfm_aw_stall();
+    disable_bfm_w_stall();
+    disable_bfm_b_stall();
+    tick(1);
+
+    // release reset
+    reset = 0;
+
+    // set dut input arguments
+    set_dut_args(src_addr, dst_addr, size);
+    // signal start and wait for ready
+    dut_start_valid = 1;
+    if(!dut_start_ready)
+        wait_for(dut_start_ready, 1000, "Timeout waiting for dut_start_ready");
+
+    // wait for done
+    dut_done_ready = 1;
+    wait_for(dut_done_valid, 1000, "Timeout waiting for dut_done_valid");
+
+    // check results
+    for (int i = 0; i < size; i++) begin
+        assert(peek_axi_memory(dst_addr + i) == src_buffer[src_addr + i])
+        else begin
+            $fatal(
+                "Result mismatch at index %0d! Expected: 0x%h, Got: 0x%h",
+                i, src_buffer[src_addr + i], peek_axi_memory(dst_addr + i)
+            );
+        end
+    end
+
+    $display("======= Test Burst Write: PASSED");
+endtask
+
 //==============================================================================
 // Test Harness
 //==============================================================================
 
 initial begin
     reset = 1;
-    
+
     init_src_buffer();
 
     tick(1);
-    
+
     reset = 0;
 
     test_single_write(0, 0);
+    test_burst_write(0, 0, 32);
 
     $display("All tests passed!");
     $finish;
