@@ -334,21 +334,45 @@ task automatic test_burst_write (
     $display("======= Test Burst Write: PASSED");
 endtask
 
+
+
 //==============================================================================
 // Test Harness
 //==============================================================================
 
 initial begin
     reset = 1;
-
     init_src_buffer();
-
     tick(1);
-
     reset = 0;
 
     test_single_write(0, 0);
+
+    /**************************************************************************
+        TODO: test_burst_write is failing due to data mismatch.
+        Please fix it.
+    **************************************************************************/
     test_burst_write(0, 0, 32);
+
+    reset = 1;
+    enable_bfm_aw_stall(0.5, 1, 10);
+    tick(1);
+    reset = 0;
+    for (int i = 0; i < 20; i = i + 1) begin
+        test_single_write(0, 0);
+    end
+    for (int i = 0; i < 20; i = i + 1) begin
+        test_burst_write(0, 0, 32);
+    end
+    reset = 1;
+    disable_bfm_aw_stall();
+
+    /**************************************************************************
+        TODO: add tests for writes with other kinds of random stalls
+        use functions at lines 162 ~ 205 to enable/disable stalls
+        Note: the stall functions must be called when reset is asserted
+    **************************************************************************/
+
 
     $display("All tests passed!");
     $finish;
