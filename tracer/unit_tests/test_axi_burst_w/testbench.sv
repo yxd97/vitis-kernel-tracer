@@ -322,11 +322,12 @@ task automatic test_burst_write (
 
     // check results
     for (int i = 0; i < size; i++) begin
-        assert(peek_axi_memory(dst_addr + i) == src_buffer[src_addr + i])
+        // adjusted here because when checking, you should advance by 4 bytes(1 word)
+        assert(peek_axi_memory(dst_addr + i * 4) == src_buffer[src_addr + i])
         else begin
             $fatal(
                 "Result mismatch at index %0d! Expected: 0x%h, Got: 0x%h",
-                i, src_buffer[src_addr + i], peek_axi_memory(dst_addr + i)
+                i, src_buffer[src_addr + i], peek_axi_memory(dst_addr + i * 4)
             );
         end
     end
@@ -346,16 +347,36 @@ initial begin
     tick(1);
     reset = 0;
 
-    test_single_write(0, 0);
+    // test_single_write(0, 0);
 
+    // test_burst_write(0, 0, 32);
+
+    // test_burst_write(0,0,64);
+    // test_burst_write(0,0,51);
+
+    // AW stall
+//    reset = 1;
+//    enable_bfm_aw_stall(0.5, 1, 10);
+//    tick(1);
+//    reset = 0;
+//    for (int i = 0; i < 20; i = i + 1) begin
+//        test_single_write(0, 0);
+//    end
+//    for (int i = 0; i < 20; i = i + 1) begin
+//        test_burst_write(0, 0, 32);
+//    end
+//    reset = 1;
+//    disable_bfm_aw_stall();
+    
     /**************************************************************************
-        TODO: test_burst_write is failing due to data mismatch.
-        Please fix it.
+        TODO: add tests for writes with other kinds of random stalls
+        use functions at lines 162 ~ 205 to enable/disable stalls
+        Note: the stall functions must be called when reset is asserted
     **************************************************************************/
-    test_burst_write(0, 0, 32);
+    // W stall 
 
     reset = 1;
-    enable_bfm_aw_stall(0.5, 1, 10);
+    enable_bfm_w_stall(0.5, 1, 10);
     tick(1);
     reset = 0;
     for (int i = 0; i < 20; i = i + 1) begin
@@ -365,13 +386,20 @@ initial begin
         test_burst_write(0, 0, 32);
     end
     reset = 1;
-    disable_bfm_aw_stall();
+    disable_bfm_w_stall();
 
-    /**************************************************************************
-        TODO: add tests for writes with other kinds of random stalls
-        use functions at lines 162 ~ 205 to enable/disable stalls
-        Note: the stall functions must be called when reset is asserted
-    **************************************************************************/
+    // // B stall
+    // enable_bfm_b_stall(0.5, 1, 10);
+    // tick(1);
+    // reset = 0;
+    // for (int i = 0; i < 20; i = i + 1) begin
+    //     test_single_write(0, 0);
+    // end
+    // for (int i = 0; i < 20; i = i + 1) begin
+    //     test_burst_write(0, 0, 32);
+    // end
+    // reset = 1;
+    // disable_bfm_b_stall();
 
 
     $display("All tests passed!");

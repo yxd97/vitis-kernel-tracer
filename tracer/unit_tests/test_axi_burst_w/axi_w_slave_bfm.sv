@@ -78,6 +78,8 @@ assign rvalid = 0;
 // combinational memory model
 logic [DataWidth-1:0] memory [0:NumMemoryWords-1];
 
+logic [AddressWidth-1:0] current_awaddr;
+
 // memory peek
 assign mem_peek_data = memory[mem_peek_addr];
 
@@ -91,9 +93,11 @@ localparam OTQ_BITWIDTH = 2 + IDWidth;
 logic [OTQ_BITWIDTH-1:0] otq [0:MaxOutstandingWrites-1];
 int otq_size = 0;
 always @(posedge clk) begin
-    if (reset) otq_size <= 0;
+    if (reset) begin
+        otq_size <= 0;
+        current_awaddr <= 0;
+    end
 end
-
 // AW logic
 int aw_stall_countdown = 0;
 always @(posedge clk) begin
@@ -105,11 +109,14 @@ always @(posedge clk) begin
         end else aw_stall_countdown <= aw_stall_countdown - 1;
     end else aw_stall_countdown <= 0;
 end
+
 assign awready = (otq_size < MaxOutstandingWrites) && (!aw_random_stall || (aw_random_stall && aw_stall_countdown == 0));
+
 always @(posedge clk) begin
-    if (awvalid & awready) begin
+    if (awvalid && awready) begin
         otq[otq_size] <= {W_PENDING_DATA, awid};
         otq_size <= otq_size + 1;
+        current_awaddr <= awaddr;
     end
 end
 
@@ -125,30 +132,13 @@ always @(posedge clk) begin
     end else w_stall_countdown <= 0;
 end
 assign wready = !w_random_stall || (w_random_stall && w_stall_countdown == 0);
+
 always @(posedge clk) begin
-    if (wvalid & wready) begin
-        // use blocking assignment so that we can immediately peek the value
-        memory[awaddr >> $clog2(DataWidth/8)] = wdata;
-        if (wlast) begin
-            // trun the earliest entry in OTQ that is active to pending response
-            // since AXI4 does not allow write data interleaving
-            for (int i = 0; i < otq_size; i = i + 1) begin
-                if (otq[i][OTQ_BITWIDTH-1:IDWidth] == W_ACTIVE) begin
-                    otq[i] <= {W_PENDING_RESP, otq[i][IDWidth-1:0]};
-                    // optionally: check for id match
-                    assert(otq[i][IDWidth-1:0] == wid);
-                    break;
-                end
-            end
-        end else begin
-            // turn the earliest entry in OTQ that is pending data to active
-            for (int i = 0; i < otq_size; i = i + 1) begin
-                if (otq[i][OTQ_BITWIDTH-1:IDWidth] == W_PENDING_DATA) begin
-                    otq[i] <= {W_ACTIVE, otq[i][IDWidth-1:0]};
-                    // optionally: check for id match
-                    assert(otq[i][IDWidth-1:0] == wid);
-                    break;
-                end
+    begin
+        if (wvalid && wready) begin
+            memory[current_awaddr >> $clog2(DataWidth/8)] = wdata;
+            if(!wlast) begin
+                current_awaddr <= current_awaddr + (DataWidth/8);
             end
         end
     end

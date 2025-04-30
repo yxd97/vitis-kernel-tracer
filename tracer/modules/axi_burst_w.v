@@ -149,13 +149,14 @@ always @(posedge clk) begin
         if (init_awaddr_reg)
             awaddr_reg <= axi_offset_reg;
         else if (incr_awaddr_reg)
-            awaddr_reg <= awaddr_reg + batch_counter * AXIMaxBurstLen * AXIDataWidth / 8;
+            awaddr_reg <= awaddr_reg + AXIMaxBurstLen * AXIDataWidth / 8;
         if (update_awlen_reg)
             awlen_reg <=
                 (batch_counter == num_batches - 1) ?
                 last_batch_size - 1 : AXIMaxBurstLen - 1;
     end
 end
+
 
 //==============================================================================
 // Control FSM
@@ -257,10 +258,10 @@ assign clear_batch_counter = (state == PREP);
 assign clear_burst_counter = (state == AW);
 assign incr_batch_counter = (state == B & bvalid & bready);
 assign incr_burst_counter = wvalid & wready & (burst_counter < awlen_reg);
-assign init_awaddr_reg = (state == PRE_AW);
+assign init_awaddr_reg = (state == PRE_AW) && batch_counter == 0;
 assign incr_awaddr_reg = (state == AW & awvalid & awready);
 assign update_awlen_reg = (state == PRE_AW);
-assign buffer_addr = data_ptr_reg + burst_counter;
+assign buffer_addr = data_ptr_reg + batch_counter * AXIMaxBurstLen + (burst_counter + (state == W2 ? 1 : 0));
 assign buffer_ce = (state == W1 || state == W2);
 assign buffer_we = 1'b0;
 
